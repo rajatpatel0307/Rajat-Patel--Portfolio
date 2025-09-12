@@ -14,7 +14,7 @@ export default function Contact() {
     setLoading(true); // 🟢 Start loading
 
     try {
-      const res = await fetch("http://localhost:5000/contact", {
+      const res = await fetch("https://rajat-patel-portfolio-kc5d.onrender.com/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, message }),
