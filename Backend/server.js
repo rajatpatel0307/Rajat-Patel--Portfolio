@@ -1,41 +1,72 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const nodemailer = require('nodemailer');
+require("dotenv").config();
+const express = require("express");
+const cors = require("cors");
+const nodemailer = require("nodemailer");
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
-// Middleware
+// ===== Middleware =====
 app.use(cors());
-app.use(express.json()); // Includes body parser for JSON
+app.use(express.json());
 
-// Reuse transporter instead of creating it every request
+// ===== Debug Route =====
+app.get("/debug-env", (req, res) => {
+  res.json({
+    EMAIL_USER: process.env.EMAIL_USER ? "✅ Loaded" : "❌ Missing",
+    EMAIL_PASS: process.env.EMAIL_PASS ? "✅ Loaded" : "❌ Missing",
+    NODE_ENV: process.env.NODE_ENV || "development",
+  });
+});
+
+// ===== Health Check =====
+app.get("/", (req, res) => {
+  res.send("✅ Backend is running fine on Render!");
+});
+
+// ===== Mail Transporter =====
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false, // true for 465, false for 587
+  requireTLS: true,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
 });
 
-app.post('/contact', async (req, res) => {
+// Verify transporter on startup
+transporter.verify((error, success) => {
+  if (error) {
+    console.error("❌ Transporter verification failed:", error.message);
+  } else {
+    console.log("✅ Gmail transporter ready to send emails.");
+  }
+});
+
+// ===== Contact Route =====
+app.post("/contact", async (req, res) => {
   const { name, email, message } = req.body;
 
   if (!name || !email || !message) {
-    return res.status(400).json({ message: 'All fields are required' });
+    return res.status(400).json({ message: "All fields are required" });
   }
 
   try {
-    // Send to yourself
+    console.log("📨 Sending emails...");
+    console.log("From:", email);
+    console.log("To (internal):", process.env.EMAIL_USER);
+
+    // Internal mail
     const internalMail = {
       from: email,
       to: process.env.EMAIL_USER,
       subject: `New message from ${name}`,
-      text: message,
+      text: `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`,
     };
 
-    // Auto-response to sender
+    // Auto-reply mail
     const autoReply = {
       from: process.env.EMAIL_USER,
       to: email,
@@ -55,19 +86,23 @@ Rajat Patel
 📧 rajat03patel@gmail.com`,
     };
 
-    // Send both emails concurrently for speed
     await Promise.all([
       transporter.sendMail(internalMail),
       transporter.sendMail(autoReply),
     ]);
 
-    res.status(200).json({ message: 'Emails sent successfully' });
+    console.log("✅ Both emails sent successfully!");
+    res.status(200).json({ message: "Emails sent successfully" });
   } catch (error) {
-    console.error('❌ Mail send error:', error);
-    res.status(500).json({ message: 'Failed to send email', error: error.message });
+    console.error("❌ Mail send error:", error);
+    res.status(500).json({
+      message: "Failed to send email",
+      error: error.message,
+    });
   }
 });
 
+// ===== Start Server =====
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });

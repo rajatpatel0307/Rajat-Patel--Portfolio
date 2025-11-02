@@ -28,14 +28,15 @@ export default function Contact() {
 
     const data = await res.json();
 
-    if (data.success) {
-      alert("✅ Message sent successfully!");
-      setName("");
-      setEmail("");
-      setMessage("");
-    } else {
-      alert("❌ Failed to send message.");
-    }
+    if (res.ok) {
+  alert("✅ Message sent successfully!");
+  setName("");
+  setEmail("");
+  setMessage("");
+} else {
+  alert("❌ Failed to send message.");
+}
+
   } catch (error) {
     console.error("Error sending message:", error);
     alert("❌ Server error.");
