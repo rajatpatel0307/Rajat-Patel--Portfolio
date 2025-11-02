@@ -9,9 +9,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.get("/", async(req,res)=>{
+app.get("/", async (req, res) => {
   res.send("Running on localhost 5000");
-})
+});
 
 // Contact Route
 app.post('/contact', async (req, res) => {
@@ -25,10 +25,15 @@ app.post('/contact', async (req, res) => {
   try {
     console.log('📩 Setting up transporter...');
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: "smtp.gmail.com",
+      port: 587,
+      secure: false, // use TLS
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
+      },
+      tls: {
+        rejectUnauthorized: false,
       },
     });
 
