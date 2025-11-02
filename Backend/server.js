@@ -1,3 +1,4 @@
+// 🌐 Load environment variables
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
@@ -7,61 +8,64 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🧩 Debug: Log environment variable presence (not values)
-console.log("🧩 Environment check:");
+// 🧩 Initial environment check
+console.log("🧩 Environment Variable Check:");
 console.log({
   EMAIL_USER_SET: !!process.env.EMAIL_USER,
   EMAIL_PASS_SET: !!process.env.EMAIL_PASS,
-  NODE_ENV: process.env.NODE_ENV,
+  NODE_ENV: process.env.NODE_ENV || "development",
 });
 
-// ✅ Health check route
+// ✅ Health route
 app.get("/", (req, res) => {
   res.send("🚀 Portfolio Email Server Running");
 });
 
-// ✅ Environment test route
+// ✅ Debug environment route
 app.get("/debug-env", (req, res) => {
   res.json({
     EMAIL_USER: process.env.EMAIL_USER ? "✅ Set" : "❌ Missing",
     EMAIL_PASS: process.env.EMAIL_PASS ? "✅ Set" : "❌ Missing",
+    NODE_ENV: process.env.NODE_ENV || "development",
   });
 });
 
 // 📨 Contact route
 app.post("/contact", async (req, res) => {
   const { name, email, message } = req.body;
-
   console.log("📨 Incoming contact request:", { name, email, message });
 
+  // Basic validation
   if (!name || !email || !message) {
     console.warn("⚠️ Missing fields:", { name, email, message });
     return res.status(400).json({ error: "All fields are required" });
   }
 
+  // Configure nodemailer
+  console.log("📩 Creating Gmail transporter...");
+  const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false, // true for 465, false for 587
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+    connectionTimeout: 10000, // 10s
+    greetingTimeout: 5000,
+    socketTimeout: 20000,
+    logger: true, // detailed SMTP logs
+    debug: true,  // verbose output
+  });
+
   try {
-    console.log("📩 Setting up Gmail transporter...");
-    console.log("👀 Using EMAIL_USER:", process.env.EMAIL_USER);
-
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 587,
-      secure: false,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-      logger: true, // ✅ nodemailer debug logs
-      debug: true,  // ✅ more verbose output
-    });
-
-    // 🧠 Check if transporter is configured
+    // Verify connection
     console.log("🔍 Verifying transporter...");
     await transporter.verify();
-    console.log("✅ Transporter verified successfully.");
+    console.log("✅ Gmail transporter verified successfully!");
 
-    // 🔔 Send email to portfolio owner
-    console.log("📤 Sending main email to:", process.env.EMAIL_USER);
+    // Send email to you
+    console.log(`📤 Sending message to portfolio owner: ${process.env.EMAIL_USER}`);
     await transporter.sendMail({
       from: `"Portfolio Contact" <${process.env.EMAIL_USER}>`,
       to: process.env.EMAIL_USER,
@@ -74,8 +78,8 @@ app.post("/contact", async (req, res) => {
       `,
     });
 
-    // 🤖 Send auto-reply
-    console.log("📤 Sending auto-reply to:", email);
+    // Auto-reply to sender
+    console.log(`📤 Sending auto-reply to: ${email}`);
     await transporter.sendMail({
       from: `"Rajat Patel" <${process.env.EMAIL_USER}>`,
       to: email,
@@ -97,9 +101,11 @@ Rajat Patel`,
     res.status(200).json({ success: true, message: "Emails sent successfully" });
 
   } catch (error) {
-    console.error("❌ Email sending failed:");
-    console.error("🧠 Error name:", error.name);
+    // 🔴 Handle and log errors
+    console.error("❌ Email sending failed!");
+    console.error("📛 Name:", error.name);
     console.error("💬 Message:", error.message);
+    if (error.response) console.error("📨 SMTP Response:", error.response);
     console.error("📜 Stack:", error.stack);
 
     res.status(500).json({
@@ -109,9 +115,14 @@ Rajat Patel`,
   }
 });
 
+// 🧠 Fallback route
+app.use((req, res) => {
+  res.status(404).json({ error: "Route not found" });
+});
+
 // 🚀 Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
-  console.log(`🌐 Visit: http://localhost:${PORT}/debug-env to check env vars`);
+  console.log(`🌐 Visit http://localhost:${PORT}/debug-env to check env vars`);
 });
