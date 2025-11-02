@@ -18,7 +18,7 @@ export default function Contact() {
     const baseURL =
       window.location.hostname === "localhost"
         ? "http://localhost:5000"
-        : "https://rajat-patel-portfolio-kc5d.onrender.com";
+        : "https://rajat-patel-portfolio.onrender.com";
 
     const res = await fetch(`${baseURL}/contact`, {
       method: "POST",
