@@ -4,105 +4,80 @@ const cors = require("cors");
 const nodemailer = require("nodemailer");
 
 const app = express();
-const PORT = process.env.PORT || 5000;
-
-// ===== Middleware =====
 app.use(cors());
 app.use(express.json());
 
-// ===== Debug Route =====
-app.get("/debug-env", (req, res) => {
-  res.json({
-    EMAIL_USER: process.env.EMAIL_USER ? "✅ Loaded" : "❌ Missing",
-    EMAIL_PASS: process.env.EMAIL_PASS ? "✅ Loaded" : "❌ Missing",
-    NODE_ENV: process.env.NODE_ENV || "development",
-  });
-});
-
-// ===== Health Check =====
+// ✅ Test route
 app.get("/", (req, res) => {
-  res.send("✅ Backend is running fine on Render!");
+  res.send("🚀 Portfolio Email Server Running");
 });
 
-// ===== Mail Transporter =====
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false, // true for 465, false for 587
-  requireTLS: true,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
-// Verify transporter on startup
-transporter.verify((error, success) => {
-  if (error) {
-    console.error("❌ Transporter verification failed:", error.message);
-  } else {
-    console.log("✅ Gmail transporter ready to send emails.");
-  }
-});
-
-// ===== Contact Route =====
+// 📨 Contact route
 app.post("/contact", async (req, res) => {
   const { name, email, message } = req.body;
 
   if (!name || !email || !message) {
-    return res.status(400).json({ message: "All fields are required" });
+    console.warn("⚠️ Missing fields:", { name, email, message });
+    return res.status(400).json({ error: "All fields are required" });
   }
 
   try {
-    console.log("📨 Sending emails...");
-    console.log("From:", email);
-    console.log("To (internal):", process.env.EMAIL_USER);
+    console.log("📩 Setting up Gmail transporter...");
 
-    // Internal mail
-    const internalMail = {
-      from: email,
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 587, // ✅ TLS port
+      secure: false, // true for port 465, false for 587
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    console.log("✅ Verifying transporter...");
+    await transporter.verify();
+    console.log("📨 Gmail transporter verified.");
+
+    // 🔔 Send email to portfolio owner
+    await transporter.sendMail({
+      from: `"Portfolio Contact" <${process.env.EMAIL_USER}>`,
       to: process.env.EMAIL_USER,
-      subject: `New message from ${name}`,
-      text: `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`,
-    };
+      subject: `📬 New message from ${name}`,
+      html: `
+        <h2>New Message from Portfolio</h2>
+        <p><b>Name:</b> ${name}</p>
+        <p><b>Email:</b> ${email}</p>
+        <p><b>Message:</b><br>${message}</p>
+      `,
+    });
 
-    // Auto-reply mail
-    const autoReply = {
-      from: process.env.EMAIL_USER,
+    // 🤖 Auto-reply to sender
+    await transporter.sendMail({
+      from: `"Rajat Patel" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: "Thanks for Reaching Out! Let’s Stay Connected ✨",
+      subject: "Thanks for reaching out! 🙌",
       text: `Hi ${name},
 
-Thank you for reaching out through my portfolio website — I truly appreciate your interest!
+Thank you for contacting me through my portfolio site!
 
-You can explore more about my work, skills, and featured projects from my portfolio.
+I've received your message:
+"${message}"
 
-If you have any questions, collaboration ideas, or would like to discuss an opportunity, feel free to reply to this email. I'd love to hear from you!
+I’ll review it and get back to you shortly.
 
-Looking forward to staying in touch.
-
-Warm regards,  
-Rajat Patel  
-📧 rajat03patel@gmail.com`,
-    };
-
-    await Promise.all([
-      transporter.sendMail(internalMail),
-      transporter.sendMail(autoReply),
-    ]);
-
-    console.log("✅ Both emails sent successfully!");
-    res.status(200).json({ message: "Emails sent successfully" });
-  } catch (error) {
-    console.error("❌ Mail send error:", error);
-    res.status(500).json({
-      message: "Failed to send email",
-      error: error.message,
+Warm regards,
+Rajat Patel`,
     });
+
+    console.log("✅ Both emails sent successfully");
+    res.status(200).json({ success: true, message: "Emails sent successfully" });
+
+  } catch (error) {
+    console.error("❌ Email sending failed:", error.message);
+    res.status(500).json({ error: "Failed to send emails", details: error.message });
   }
 });
 
-// ===== Start Server =====
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+// 🚀 Start the server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
