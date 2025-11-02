@@ -10,33 +10,40 @@ export default function Contact() {
 
   // Handle form submit
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true); // 🟢 Start loading
+  e.preventDefault();
+  setLoading(true); // 🟢 Start loading
 
-    try {
-      const res = await fetch("https://rajat-patel-portfolio-kc5d.onrender.com/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, message }),
-      });
+  try {
+    // Automatically choose API base URL
+    const baseURL =
+      window.location.hostname === "localhost"
+        ? "http://localhost:5000"
+        : "https://rajat-patel-portfolio-kc5d.onrender.com";
 
-      const data = await res.json();
+    const res = await fetch(`${baseURL}/contact`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, message }),
+    });
 
-      if (data.success) {
-        alert("✅ Message sent successfully!");
-        setName("");
-        setEmail("");
-        setMessage("");
-      } else {
-        alert("❌ Failed to send message.");
-      }
-    } catch (error) {
-      console.error("Error sending message:", error);
-      alert("❌ Server error.");
+    const data = await res.json();
+
+    if (data.success) {
+      alert("✅ Message sent successfully!");
+      setName("");
+      setEmail("");
+      setMessage("");
+    } else {
+      alert("❌ Failed to send message.");
     }
+  } catch (error) {
+    console.error("Error sending message:", error);
+    alert("❌ Server error.");
+  }
 
-    setLoading(false); // 🔴 Stop loading
-  };
+  setLoading(false); // 🔴 Stop loading
+};
+
 
   return (
     <section id="contact" className="py-5 bg-light-dark" style={{

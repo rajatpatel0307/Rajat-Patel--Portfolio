@@ -9,6 +9,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.get("/", async(req,res)=>{
+  res.send("Running on localhost 5000");
+})
+
 // Contact Route
 app.post('/contact', async (req, res) => {
   const { name, email, message } = req.body;
